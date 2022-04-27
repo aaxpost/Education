@@ -1,0 +1,451 @@
+⋕pp.lr.Pm.Pg.Pg.1
+
+1. При помощи миграции создайте в базе данных таблицу contacts (id, name, phone) содержащую данные телефонной книги.
+2. Используя инструмент Database: Seeding наполните таблицу 20 записями. (использовал factory)
+
+3. Выведите на экран все записи в виде таблицы, используя QB.
+
+4. Подключите к контроллеру пагинатор используя метод paginate. Настройте вывод на каждой странице 10 элементов.
+
+5. Настройте вывод навигационного меню для управления пагинацией.
+
+6. Переделайте пагинатор на метод simplePaginate.
+
+7. Реализуйте пагинацию на основе запросов Eloquent.
+
+8. Отсортируйте записи телефонной книги по алфавиту и выведите в пагинаторе.
+
+9. Выведите на одной странице два варианта телефонной книги, первый вариант отсортируйте по возразстанию, а второй по убыванию алфавита.
+
+10. Реализуйте курсорную пагинацию в проекте телефонной книги. Убедитесь, что запрос к базе данных изменился.
+
+11. Настройте пагинацию на основе класса Illuminate\Pagination\Paginator (simplePaginate).
+
+12. Настройте пагинацию на основе класса Illuminate\Pagination\LengthAwarePaginator (paginate).
+
+13. Настройте пагинацию на основе класса Illuminate\Pagination\CursorPaginator (cursorPaginate).
+
+Настройка URL-адресов постраничной навигации 
+
+15. withPath не реализовал((
+
+16. Добавьте параметр в строку запроса. ['sort' => 'asc' ]
+
+17. Добавьте на первую страницу get-запрос. Убедитесь, что он сохраняется при переходе на каждую страницу. Используйте метод withQueryString.
+
+18. Добавьте к URL адресу хеш фрагмент.
+
+
+
+
+
+
+
+Курсорная и офсетная разбива, посмотреть запросы и пояснить отличия.
+
+Создать пагинатор самостоятельно
+
+
+*********************************************************************************
+
+4. Подключите к контроллеру пагинатор используя метод paginate. Настройте вывод на каждой странице 10 элементов.
+
+5. Настройте вывод навигационного меню для управления пагинацией.
+
+/var/www/test.com/routes/web.php
+use App\Http\Controllers\ContactController;
+Route::get('/', [ContactController::class, 'result']);
+
+/var/www/test.com/app/Http/Controllers/ContactController.php
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+
+class ContactController extends Controller
+{
+     /**
+     * Show the profile for a given user.
+     *
+     * @param  int  $id
+     * @return \Illuminate\View\View
+     */
+    public function result()
+    {
+        $contacts = DB::table('contacts')->paginate(10);
+        return view('contact.result', ['contacts' => $contacts]);
+    }
+}
+
+/var/www/test.com/resources/views/contact/result.blade.php
+<x-layout>
+    <div class="container">
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Name</th>
+                <th scope="col">Phone</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($contacts as $contact)
+            <tr>
+                <th scope="row">{{ $contact->id }}</th>
+                <td>{{ $contact->name }}</td>
+                <td>{{ $contact->phone }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+    </div>   
+    <div class="position-absolute bottom-0 start-50 translate-middle-x">
+   {{ $contacts->links() }}
+    </div>
+     
+
+</x-layout>
+
+/var/www/test.com/app/Providers/AppServiceProvider.php
+<?php
+
+namespace App\Providers;
+
+use Illuminate\Support\ServiceProvider;
+use Illuminate\Pagination\Paginator;
+
+class AppServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any application services.
+     *
+     * @return void
+     */
+    public function register()
+    {
+        //
+    }
+
+    /**
+     * Bootstrap any application services.
+     *
+     * @return void
+     */
+    public function boot()
+    {
+        //
+      Paginator::useBootstrapFive();
+    }
+}
+
+6. Переделайте пагинатор на метод simplePaginate.
+$contacts = DB::table('contacts')->simplePaginate(10);
+
+
+7. Реализуйте пагинацию на основе запросов Eloquent.
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Models\User;
+//use Illuminate\Support\Facades\DB;
+use Illuminate\Database\Eloquent\Model;
+use App\Models\Contact;
+
+class ContactController extends Controller
+{
+     /**
+     * Show the profile for a given user.
+     *
+     * @param  int  $id
+     * @return \Illuminate\View\View
+     */
+    public function result()
+    {
+        $contacts = Contact::paginate(7);
+        return view('contact.result', ['contacts' => $contacts]);
+    }
+}
+
+
+9. Выведите на одной странице два варианта телефонной книги, первый вариант отсортируйте по возразстанию, а второй по убыванию алфавита.
+
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Models\Contact;
+
+class ContactController extends Controller
+{
+     /**
+     * Show the profile for a given user.
+     *
+     * @param  int  $id
+     * @return \Illuminate\View\View
+     */
+    public function result()
+    {
+        $contactsAsc = Contact::orderBy('name', 'asc')->paginate(
+                $perPage = 5, $columns = ['*'], $pageName = 'contactsAsc');
+        
+        $contactsDesc = Contact::orderBy('name', 'desc')->paginate(
+                $perPage = 5, $columns = ['*'], $pageName = 'contactsDesc');
+        
+        return view('contact.result', ['contactsAsc' => $contactsAsc, 'contactsDesc' => $contactsDesc]);
+    }
+}
+
+
+<x-layout>
+    <div class="container">
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Name</th>
+                <th scope="col">Phone</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($contactsAsc as $contactAsc)
+            <tr>
+                <th scope="row">{{ $contactAsc->id }}</th>
+                <td>{{ $contactAsc->name }}</td>
+                <td>{{ $contactAsc->phone }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+       
+    <div class="container">
+   {{ $contactsAsc->links() }}
+    </div>
+    </div>
+    
+    <div class="container">
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th scope="col">#</th>
+                <th scope="col">Name</th>
+                <th scope="col">Phone</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($contactsDesc as $contactDesc)
+            <tr>
+                <th scope="row">{{ $contactDesc->id }}</th>
+                <td>{{ $contactDesc->name }}</td>
+                <td>{{ $contactDesc->phone }}</td>
+            </tr>
+            @endforeach
+        </tbody>
+    </table>
+       
+    <div class="container">
+   {{ $contactsDesc->links() }}
+    </div>
+    </div>
+     
+
+</x-layout>
+
+
+10. Реализуйте курсорную пагинацию в проекте телефонной книги. Убедитесь, что запрос к базе данных изменился.
+
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Models\Contact;
+use Illuminate\Support\Facades\DB;
+
+class ContactController extends Controller
+{
+     /**
+     * Show the profile for a given user.
+     *
+     * @param  int  $id
+     * @return \Illuminate\View\View
+     */
+    public function result()
+    {
+        
+        
+        $contactsAsc = DB::table('contacts')->orderBy('id')->cursorPaginate(10);
+        
+        return view('contact.result', ['contactsAsc' => $contactsAsc]);
+    }
+}
+
+select * from `contacts` where (`id` < 11) order by `id` desc limit 11
+
+11. Настройте пагинацию на основе класса Illuminate\Pagination\Paginator (simplePaginate).
+/var/www/test.com/app/Http/Controllers/ContactController.php
+
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Models\Contact;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Http\Request;
+
+class ContactController extends Controller
+{
+     /**
+     * Show the profile for a given user.
+     *
+     * @param  int  $id
+     * @return \Illuminate\View\View
+     */
+    public function result(Request $request)
+    {
+        
+      if(!empty($request->query('page'))) {  
+      $numPage = $request->query('page'); 
+      } else {
+        $numPage = 1;
+      }
+        
+        $contactsAsc = DB::table('contacts')->get()->all();
+        
+        $perPage = 15;
+        $contactsAsc = array_slice($contactsAsc, ($perPage * $numPage) - $perPage);
+        $newSimplePaginate = new Paginator($contactsAsc, $perPage, $numPage);
+        
+       
+        return view('contact.result', ['contactsAsc' => $newSimplePaginate]);
+        
+    }
+}
+
+12. Настройте пагинацию на основе класса Illuminate\Pagination\LengthAwarePaginator (paginate).
+
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Models\Contact;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Http\Request;
+
+class ContactController extends Controller {
+
+  /**
+   * Show the profile for a given user.
+   *
+   * @param  int  $id
+   * @return \Illuminate\View\View
+   */
+  public function result(Request $request) {
+
+    if (!empty($request->query('page'))) {
+      $numPage = $request->query('page');
+    } else {
+      $numPage = 1;
+    }
+
+    $contactsAsc = DB::table('contacts')->get()->all();
+    $count = DB::table('contacts')->count();
+
+    $perPage = 10;
+    $contactsAsc = array_slice($contactsAsc, ($perPage * $numPage) - $perPage, $perPage);
+    $newSimplePaginate = new LengthAwarePaginator($contactsAsc, $count, $perPage, $numPage);
+
+    return view('contact.result', ['contactsAsc' => $newSimplePaginate]);
+  }
+
+}
+
+13. Настройте пагинацию на основе класса Illuminate\Pagination\CursorPaginator (cursorPaginate).
+не смог разобраться...
+
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use App\Models\Contact;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Pagination\CursorPaginator;
+use Illuminate\Pagination\Cursor;
+use Illuminate\Http\Request;
+
+class ContactController extends Controller {
+
+    public function result(Request $request) {
+    
+    if (!empty($request->query('cursor'))) {
+    $cursor = Cursor::fromEncoded($request->query('cursor'));
+    } else {
+      $cursor = null;
+    }
+
+    $contacts = DB::table('contacts')->orderBy('id')->get()->all();
+
+    $perPage = 15;
+    
+    $newSimplePaginate = new CursorPaginator($contacts, $perPage, $cursor);
+
+    return view('contact.result', ['contactsAsc' => $newSimplePaginate]);
+  }
+
+}
+
+16. Добавьте параметр в строку запроса. ['sort' => 'asc' ]
+
+Route::get('/users', function () {
+ $contacts = Contact::paginate(15);
+ $contacts->appends(['sort' => 'asc' ]);
+ return view('contact.result')->with('contactsAsc', $contacts);  
+});
+
+17. Добавьте на первую страницу get-запрос. Убедитесь, что он сохраняется при переходе на каждую страницу. Используйте метод withQueryString.
+
+Добавил, все работает.
+
+18. Добавьте к URL адресу хеш фрагмент.
+
+Route::get('/users', function () {
+ $contacts = Contact::paginate(15)->fragment('test');
+ return view('contact.result')->with('contactsAsc', $contacts);  
+});
+
+19. Настройка вида пагинации
+Не углублялся подключил Bootstrap и Tailwind (не знаком с ним...). Стили не настраивал.
+Все работает.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

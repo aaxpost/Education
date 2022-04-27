@@ -1,0 +1,81 @@
+⋕pp.lr.Pm.Fr.DA.1
+/var/www/test.com/app/Http/Controllers/UserController.php
+class UserController extends Controller {
+
+  //
+
+
+  public function form() {
+    return view('user.form');
+  }
+
+  public function result(Request $request, $id, $login) {
+
+    if ($request) {
+      return view('user.result', ['request' => $request->all(), 'id' => $id, 'login' => $login]);
+    }
+  }
+
+}
+
+
+/var/www/test.com/resources/views/user/form.blade.php
+<x-layout>
+    
+    <form action="/12/login12" method="POST">
+        @csrf
+        <p>name</p>
+        <input name="name"><br>
+        <p>lastname</p>
+        <input name="lastname"><br>
+        <p>email</p>
+        <input name="email"><br>
+        <p>login</p>
+        <input name="login"><br>
+        <p>password</p>
+        <input name="password"><br>
+        <p></p>
+        <input type="submit">
+    </form>
+</x-layout>
+
+/var/www/test.com/resources/views/user/result.blade.php
+<x-layout>
+<p>{{ $id }}</p>
+<p>{{ $login }}</p>
+
+@php
+dump($request);
+@endphp
+
+</x-layout>
+
+/var/www/test.com/routes/web.php
+Route::get('/', [UserController::class, 'form']);
+Route::post('/{id}/{login}', [UserController::class, 'result']);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

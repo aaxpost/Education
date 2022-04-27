@@ -1,0 +1,44 @@
+⋕pp.lr.Pm.Fr.DA.1
+/var/www/test.com/app/Http/Controllers/UserController.php
+class UserController extends Controller {
+
+  //
+
+
+  public function show() {
+    return "<a href=\"/form\" target=\"_blank\">ссылка на form</a>";
+  }
+
+  public function form(Request $request) {
+
+    if ($request) {
+      return view('user.form', ['request' => $request->all()]);
+    } else {
+    return view('user.form', ['request' => 'request']);
+    }
+  }
+
+
+/var/www/test.com/resources/views/user/form.blade.php
+<x-layout>
+    @php    
+    dump($request)
+    @endphp
+    <<ul>
+    @foreach($request as $key => $elem)
+    @if($key != '_token')
+    <li>{{ $elem }}</li>
+    @endif
+    @endforeach
+    </ul>
+    
+
+    <form action="" method="POST">
+        @csrf
+        <input name="city1"><br>
+        <input name="city2"><br>
+        <input name="city3"><br>
+        <input name="city4"><br>
+        <input type="submit">
+    </form>
+</x-layout>

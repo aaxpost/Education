@@ -1,0 +1,181 @@
+<?php
+//Кратковременные данные
+
+
+//1.Создайте форму для ввода логина пользователя. Если введенный логин существует в базе данных, 
+//выведите данные пользователя. Если логина в базе данных нет выведите flash сообщение об ошибке.
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\User;
+
+class ContactController extends Controller {
+
+  public function form(Request $request) {
+
+
+
+    if ($request->has('login')) {
+      $user = User::where('login', $request->input('login'))->first();
+      //dump($user);
+      if (empty($user->login)) {
+        $request->session()->flash('status', 'Login error!');
+        echo session()->get('status');
+      } else {
+        echo $user->login;
+      }
+    }
+
+    return view('contact.form');
+  }
+
+}
+
+
+//2.Реализуйте контроль количества попыток ввода логина в форму. Каждый раз после отправки формы
+//выводите номер попытки и предупреждающее сообщение.
+//Предупреждающее сообщение сохраняйте в сессии при помощи метода refresh.
+
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\User;
+
+class ContactController extends Controller {
+
+  public function form(Request $request) {
+
+    $count = $request->session()->get('counter', 1);
+
+    if ($request->has('login')) {
+
+      $request->session()->put('counter', $count + 1);
+
+      $user = User::where('login', $request->input('login'))->first();
+
+      if (empty($user->login) AND $count == 1) {
+
+        $request->session()->flash('status', 'Login error!');
+        
+      } elseif(empty($user->login) AND $count > 1 AND $count <= 50) {
+
+        $request->session()->reflash();
+        
+      } else {
+
+        echo 'Данный пользователь существует'.$user->login;
+      }
+    }
+
+    echo 'У Вас 3 попытки. ' . $count . ' попытка' . '<br>';
+
+    echo session()->get('status');
+
+    return view('contact.form');
+  }
+  
+  public function dell(Request $request) {
+    
+    $request->session()->flush();
+    
+  }
+
+}
+
+
+//3.После третьей ошибки сохраните количество попыток и сообщение о неправильно введенных
+//данных. Пусть сообщение об неверно введенных данных выводится на экран, а форма будет заблокирована.
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Http\Request;
+use App\Models\User;
+
+class ContactController extends Controller {
+
+  public function form(Request $request) {
+    
+    //echo 'значение в куки: '.$request->cookie('timeout');
+    
+    $message = '';
+    
+    if($request->cookie('timeout') == 'error') {
+      $atrr = 'disabled';
+      $message = 'Вы использовали 3 попытки. Попробуйте повторить вход через 1 минуту.';
+    } else {
+      $atrr = '';
+    }
+
+    $count = $request->session()->get('counter', 1);
+
+    if ($request->has('login')) {
+
+      $user = User::where('login', $request->input('login'))->first();
+
+      if (empty($user->login) AND $count == 1) {
+
+        $request->session()->flash('status', 'Login error!');
+        
+        $request->session()->put('counter', $count + 1);
+        
+        $message = 'У Вас 3 попытки. ' . ($count + 1). ' попытка' . '<br>';
+        
+      } elseif(empty($user->login) AND $count > 1 AND $count < 3) {
+        
+        $request->session()->put('counter', $count + 1);
+
+        $request->session()->reflash();
+        
+        $message = 'У Вас 3 попытки. ' . ($count + 1). ' попытка' . '<br>';
+        
+      } elseif(empty($user->login) AND $count >= 3) {
+        
+        $message = 'Вы использовали 3 попытки. Попробуйте повторить вход через 30 минут.';
+        
+        $atrr = 'disabled';
+        
+        $request->session()->forget('counter');
+        
+        return response('Ошибка ввода данных, форма заблокирована.')->cookie('timeout', 'error', 1);
+        
+      } elseif(!empty($user->login)) {
+
+        echo 'Данный пользователь существует'.$user->login;
+        
+        
+        
+      } else {
+        
+        echo 'ERROR CODE';
+        
+      }
+    }
+
+    echo $message;
+
+    echo session()->get('status');
+
+    return view('contact.form', ['atrr' => $atrr]);
+  }
+  
+  public function dell(Request $request) {
+    
+    $request->session()->flush();
+    
+  }
+
+}
+
+
+
+
+
+
+

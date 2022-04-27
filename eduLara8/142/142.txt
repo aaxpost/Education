@@ -1,0 +1,43 @@
+⋕pp.lr.Pm.Fr.HOA.1
+/var/www/test.com/app/Http/Controllers/UserController.php
+class UserController extends Controller
+{ 
+    //
+   
+
+    public function show()
+    {
+        return "<a href=\"/form\" target=\"_blank\">ссылка на form</a>";
+    }
+
+    public function form(Request $request)
+    {
+        
+        if ($request->has('city') and $request->has('country')) {
+            return view('user.form')
+                ->with('city', $request->input('city'))
+                ->with('country', $request->input('country'));
+        }
+
+        return view('user.form');
+    }
+
+
+
+}
+
+/var/www/test.com/resources/views/user/form.blade.php
+<x-layout>
+
+@if(isset($city) AND isset($country))
+<p>{{ $city }}</p>
+<p>{{ $country }}</p>
+@endif
+
+<form action="" method="POST">
+    @csrf
+	<input name="city">
+	<input name="country">
+	<input type="submit">
+</form>
+</x-layout>
