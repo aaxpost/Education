@@ -1,0 +1,509 @@
+<?php
+//Быстрый старт
+1. до "Отображение ошибок валидации"
+Создать в базе данных таблицу для хранения статей
+id; text;
+Создать роуты для вывода формы и для обработки данных.
+Создать форму для сохранения в базу статей.
+Создать метод для валидации и сохранения данных в базу.
+
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Models\Article;
+
+class ArticleController extends Controller {
+
+  //
+  public function form() {
+    
+    return view('article.form');
+    
+  }
+  
+  public function verification(Request $request) {
+    
+    $validated = $request->validate([
+        'text' => 'required|unique:articles,text|max:10',
+    ]);
+    
+    $article = new Article;
+    
+    $article->text = $request->text;
+    
+    $article->save();
+    
+    return 'success';
+    
+  }
+  
+}
+
+//Отображение ошибок валидации
+2. Настройте вывод ошибок в представлении.
+@if ($errors->any())
+    <div class="alert alert-danger">
+        <ul>
+            @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+    </div>
+@endif
+
+3. Изучите содержание файла lang/en/validation.php 
+Измените содержание одного из правил. Убедитесь, что содержание сообщения изменилось.
+
+'unique' => 'Этот :attribute уже находится в базе данных.',
+
+//Директива @error
+//Решить вместе с именованными колекциями ошибок.
+
+
+
+//Повторное заполнение форм.
+4. После ошибки заполнения формы выведите введенные данные на страницу.
+
+public function form(Request $request) {
+    
+    if ($request->old('text') !== 0) {
+    echo $request->old('text');
+    }
+    
+    return view('article.form');
+    
+  }
+  
+5. После ошибки заполнения формы выведите данные в поле формы.
+
+<input class="form-control" name="text" class="@error('text') is-invalid @enderror" value="{{ old('text') }}"><br>
+
+//Примечание о необязательных полях
+6. Убедитесь, что при сохранение поста в базе данных не сохраняются пробелы в начале и в конце строки.
+
+//убедились
+
+7. Создайте в базе данных и в форме поле 'publish_at'. Проверьте как будет работать форма в случае если поле не будет заполнено. Реализуйте функцию необязательного поля.
+
+public function verification(Request $request) {
+    
+    $validated = $request->validate([
+        'text' => 'required|unique:articles,text|max:10',
+        'publish_at' => 'nullable|date',
+    ]);
+    
+    $article = new Article;
+    
+    $article->text = $request->text;
+    $article->publish_at = $request->publish_at;
+    
+    $article->save();
+    
+    return 'success';
+    
+}
+
+//Валидация запроса формы
+//Создание запросов формы
+
+8. Создайте класс запроса для вашей формы.
+
+php artisan make:request StoreArticleRequest
+
+9. Перенесите логику валидации в класс запроса и проверьте ее работу.
+
+/var/www/test.com/app/Http/Controllers/ArticleController.php
+
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Models\Article;
+use \App\Http\Requests\StoreArticleRequest;
+
+class ArticleController extends Controller {
+
+  //
+  public function form(Request $request) {
+    
+    if ($request->old('text') !== 0) {
+    echo $request->old('text');
+    }
+    
+    return view('article.form');
+    
+  }
+  
+  public function verification(StoreArticleRequest $request) {
+    
+    $validated = $request->validated();
+    
+    $article = new Article;
+    
+    $article->text = $validated['text'];
+    $article->publish_at = $validated['publish_at'];
+    
+    $article->save();
+    
+    return 'success';
+    
+  }
+  
+  
+
+}
+
+
+/var/www/test.com/app/Http/Requests/StoreArticleRequest.php
+
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class StoreArticleRequest extends FormRequest {
+
+  /**
+   * Determine if the user is authorized to make this request.
+   *
+   * @return bool
+   */
+  public function authorize() {
+    return true;
+  }
+
+  /**
+   * Get the validation rules that apply to the request.
+   *
+   * @return array
+   */
+  public function rules() {
+    return [
+        'text' => 'required|unique:articles,text|max:10',
+        'publish_at' => 'nullable|date',
+    ];
+  }
+
+}
+
+//Добавление хуков after для запросов форм
+
+10. Добавьте хук в форму. Пусть хук проверяет, что строка начинается с заглавной буквы. При соблюдении этого условия сохраните данные в базе данных. При ошибке выведите сообщение над формой и остановите валидацию данных.
+
+/var/www/test.com/app/Http/Requests/StoreArticleRequest.php
+
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
+
+class StoreArticleRequest extends FormRequest {
+
+  /**
+   * Determine if the user is authorized to make this request.
+   *
+   * @return bool
+   */
+  public function authorize() {
+    return true;
+  }
+
+  /**
+   * Get the validation rules that apply to the request.
+   *
+   * @return array
+   */
+  public function rules() {
+    return [
+        'text' => 'required|unique:articles,text|max:10',
+        'publish_at' => 'nullable|date',
+    ];
+  }
+
+  public function capitalLetter($string) {
+      if(preg_match("/^[A-Z]{1,}.+/", $string) == 1) {
+        return 1;
+      } else {
+        return 0;
+      }
+  }
+  
+  public function withValidator($validator) {
+  dd($validator);
+    $validator->after(function ($validator) {
+      if ($this->capitalLetter($this->input('text')) == false) {
+        $validator->errors()->add('field', 'withValidator Что-то не так с этим полем !');
+      }
+    });
+  }
+
+}
+
+
+Прекращение валидации после первой неуспешной проверки
+
+11. Добавьте свойство $stopOnFirstFailure в класс запроса, проверьте его работу.
+
+Не разаборался как работает.
+
+Изменение адреса ответа-перенаправления
+
+12. Разобрался работает.
+
+Авторизация запросов
+
+//временно пропустил, или до авторизации
+
+Корректировка сообщений об ошибках
+
+13. Внесите изменения в сообщение об ошибке.
+
+public function messages() {
+    return [
+        'publish_at.date' => 'Данные не являются датой',
+    ];
+  }
+  
+Корректировка атрибутов валидации
+
+14. Внесите изменения в атрибут валидации.
+
+public function messages() {
+    return [
+        'publish_at.date' => 'Данные :attribute не являются датой',
+    ];
+  }
+
+public function attributes() {
+    return [
+        'publish_at' => 'дата публикации',
+    ];
+  }
+  
+  
+Подготовка входящих данных для валидации
+
+15. Реализуйте подготовку входящих данных в своем классе.
+
+protected function prepareForValidation() {
+    $this->merge([
+        'text' => Str::limit($this->input('text'), 5),
+    ]);
+  }
+  
+Создание валидатора по требованию
+
+15. Реализуйте валидатор на основе фасада Validator.
+
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Models\Article;
+//use \App\Http\Requests\StoreArticleRequest;
+use Illuminate\Support\Facades\Validator;
+
+class ArticleController extends Controller {
+
+  //
+  public function form(Request $request) {
+
+    if ($request->old('text') !== 0) {
+      echo $request->old('text');
+    }
+
+    return view('article.form');
+  }
+
+  public function verification(Request $request) {
+    $validator = Validator::make($request->all(), [
+                'text' => 'required|unique:articles,text|max:10',
+                'publish_at' => 'nullable|date',
+    ]);
+
+    if ($validator->fails()) {
+      return redirect('/')
+                      ->withErrors($validator)
+                      ->withInput();
+    }
+
+    // Получить провалидированные входные данные ...
+    $validated = $validator->validated();
+
+    // Получить часть провалидированных входных данных ...
+    $validated = $validator->safe()->only(['text', 'publish_at']);
+    //$validated = $validator->safe()->except(['name', 'email']);
+
+    // Сохранить сообщение блога ...
+    $article = new Article;
+    
+    $article->text = $request->text;
+    
+    $article->publish_at = $request->publish_at;
+    
+    $article->save();
+    
+    return 'success';
+            
+  }
+
+}
+
+16. Прекращение валидации после первой неуспешной проверки
+
+ if ($validator->stopOnFirstFailure()->fails()) {
+    // ...
+      return 'error';
+    }
+    
+
+17. Автоматическое перенаправление
+
+не понял как работает и зачем нужно, запрос и без этого при ошибке возвращатеся на форму.
+
+18. Именованные коллекции ошибок
+
+Проверил - работает.
+  
+19. Корректировка сообщений об ошибках
+
+ public function verification(Request $request) {
+    $validator = Validator::make($request->all(), [
+                'text' => 'required|unique:articles,text|max:10',
+                'publish_at' => 'nullable|date'],
+                 $messages = ['text.required' => 'Строка :attribute обязательная.',]
+    );
+    
+20. Указание пользовательских имен для атрибутов
+
+$validator = Validator::make($request->all(), [
+                'text' => 'required|unique:articles,text|max:10',
+                'publish_at' => 'nullable|date'],
+                    $messages = ['text.required' => 'Строка :attribute обязательная.',],
+            ['text' => 'текст',]
+    );
+    
+Хук валидатора After
+
+21. Добавьте хук валидатора After в код валидации.
+
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Models\Article;
+//use \App\Http\Requests\StoreArticleRequest;
+use Illuminate\Support\Facades\Validator;
+
+class ArticleController extends Controller {
+
+  //
+  
+  public function capitalLetter($string) {
+      if(preg_match("/^[A-Z]{1,}.+/", $string) == 1) {
+        return 1;
+      } else {
+        return 0;
+      }
+  }
+  
+  public function form(Request $request) {
+
+    /*
+    if ($request->old('text') !== 0) {
+      echo $request->old('text');
+    }
+     * 
+     */
+
+    return view('article.form');
+  }
+
+  public function verification(Request $request) {
+        
+    $validator = Validator::make($request->all(), [
+                'text' => 'required|unique:articles,text|max:10',
+                'publish_at' => 'nullable|date'],
+                    $messages = ['text.required' => 'Строка :attribute обязательная.',],
+            ['text' => 'текст',]
+    );
+    
+    
+   
+    $validator->after(function ($validator) {
+      $validated = $validator->safe();
+      if ($this->capitalLetter($validated['text']) == false) {
+        $validator->errors()->add('field', 'withValidator Что-то не так с этим полем !');
+      }
+    });
+
+    
+    
+
+    if ($validator->fails()) {
+      return redirect('/')
+                      ->withErrors($validator)
+                      ->withInput();
+    }
+
+
+    // Получить провалидированные входные данные ...
+    //$validated = $validator->validated();
+    // Получить часть провалидированных входных данных ...
+    $validated = $validator->safe()->only(['text', 'publish_at']);
+    //$validated = $validator->safe()->except(['name', 'email']);
+    // Сохранить сообщение блога ...
+    $article = new Article;
+
+    $article->text = $request->text;
+
+    $article->publish_at = $request->publish_at;
+
+    $article->save();
+
+    return 'success';
+  }
+
+  /*
+    public function verification(StoreArticleRequest $request) {
+
+
+
+    $validated = $request->validated();
+
+    $article = new Article;
+
+    $article->text = $validated['text'];
+    $article->publish_at = $validated['publish_at'];
+
+    $article->save();
+
+    return 'success';
+
+    }
+   */
+}
+
+Работа с провалидированными входящими данными
+   
+
+
+
+
+
+
+
+
+
+
